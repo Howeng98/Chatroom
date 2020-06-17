@@ -8,6 +8,11 @@ gcc -o server server.c -lpthread
 ```
 gcc -o client client.c -lpthread
 ```
+Or you can just use make command for compile
+```
+make
+```
+
 ## Execute
 ```
 ./server 
