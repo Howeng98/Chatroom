@@ -12,39 +12,44 @@
 #include <netdb.h>
 #define PORT "8888"
 
-void *get_in_addr(struct sockaddr *sa)
+// use this function to seperate different type of sin_addr condition
+void *get_in_addr(struct sockaddr *sockAddr)
 {
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+    if (sockAddr->sa_family == AF_INET) 
+        return &(((struct sockaddr_in*)sockAddr)->sin_addr);
+    
+    return &(((struct sockaddr_in6*)sockAddr)->sin6_addr);
 }
-
 int main(void)
 {
     fd_set master;    
     fd_set recvFD;  
     int sockFD_num,listener,new_sockFD;
-    int i,j,rv,available=1,error;  
-    struct sockaddr_storage remoteaddr; //client address
+    int i,j,rv,available=1,error,result;  
+    // Client Address
+    struct sockaddr_storage remoteaddr;
     socklen_t addrlen;
 
+    // Command to quit
     char buf[256];      
     char remoteIP[INET6_ADDRSTRLEN];
     struct addrinfo addrinfo, *temp, *request;
     
+    // Initialize addrinfo for client connect
     memset(&addrinfo, 0, sizeof addrinfo);
     addrinfo.ai_family = AF_UNSPEC;
     addrinfo.ai_socktype = SOCK_STREAM;
     addrinfo.ai_flags = AI_PASSIVE;
+
+    // memset
     FD_ZERO(&master);  
-    FD_ZERO(&recvFD); 
+    FD_ZERO(&recvFD);
     if ((rv = getaddrinfo(NULL, PORT, &addrinfo, &temp)) != 0) {
         fprintf(stderr, "Selectserver: %s\n", gai_strerror(rv));
         exit(1);
     }
     
+    // socket and bind the first available client from the request queue
     for(request = temp; request != NULL; request = request->ai_next)
     {
         listener = socket(request->ai_family, request->ai_socktype, request->ai_protocol);
@@ -63,14 +68,18 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
+    // we use temp as head of queue, after binding just release it
     freeaddrinfo(temp);
     puts("Binding successful!");
-    // listen
+
+    // Listen
     if (listen(listener, 10) == -1)
     {
         perror("listen");
         exit(EXIT_FAILURE);
     }
+
+    // Port
     printf("Listening on port:%s\n",PORT);
     FD_SET(listener, &master);
     sockFD_num = listener;
@@ -83,34 +92,31 @@ int main(void)
             perror("select");
             exit(4);
         }
-
+        // Run through all client user = sockFD queue
         for(i = 0; i <= sockFD_num; i++)
         {
             if (FD_ISSET(i, &recvFD))
-            {   // we got one
+            {   
                 if (i == listener)
                 {
-                    // handle new connections
+                    // Accept
                     addrlen = sizeof remoteaddr;
-                    new_sockFD = accept(listener,
-                        (struct sockaddr *)&remoteaddr,
-                        &addrlen);
-
+                    new_sockFD = accept(listener,(struct sockaddr *)&remoteaddr,&addrlen);
                     if (new_sockFD == -1)                    
                         perror("accept");                    
                     else
                     {
                         FD_SET(new_sockFD, &master);
                         if (new_sockFD > sockFD_num)
-                        {   // keep track of the max
+                        {   
+                            //Update the max number of sockFD
                             sockFD_num = new_sockFD;
-                        }
+                        }                 
                         printf("Selectserver: Connection from %s on "
-                               "socket %d\n", inet_ntop(remoteaddr.ss_family,
-                               get_in_addr((struct sockaddr*)&remoteaddr),
-                               remoteIP, INET6_ADDRSTRLEN), new_sockFD);
+                               "socket %d\n", inet_ntop(remoteaddr.ss_family,get_in_addr((struct sockaddr*)&remoteaddr),remoteIP, INET6_ADDRSTRLEN), new_sockFD);
                     }
                 } 
+                // check recv data from clients and remove it from master set
                 else if ((error = recv(i, buf, sizeof buf, 0)) <= 0){   
                         if (error == 0)                        
                             printf("Selectserver: Socket %d dropped\n", i);                
@@ -119,6 +125,7 @@ int main(void)
                         close(i);
                         FD_CLR(i, &master);
                 }
+                // sending data and set it to master set
                 else{                    
                     for(j = 0; j <= sockFD_num; j++)
                     {                        

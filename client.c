@@ -119,7 +119,8 @@ int main(int argc, char *argv[])
         // quit chatroom when they enter "/QUIT"
 		if(buf[0] == '/' && buf[1] == 'Q' && buf[2] == 'U' && buf[3] == 'I' && buf[4] == 'T')
 			return 1;		
-					
+
+        // String processing , add ":" when output
         while(count < strlen(username))
         {
             message[count] = username[count];
@@ -129,20 +130,25 @@ int main(int argc, char *argv[])
         message[count] = ':';
         count++;
 		
+        // update message content
         for(int i = 0; i < strlen(buf); i++)
         {
             message[count] = buf[i];
             count++;
         }
         message[count] = '\0';
+
+        // sending
         if(send(sockfd, message, strlen(message), 0) < 0)
         {
             puts("Send failed");
             return EXIT_FAILURE;
         }
+        // initialize buffer
         memset(&buf, 0, sizeof(buf));        
     }
     
+    // close socket
     puts("Closing socket connection");
     pthread_join(recv_thread , NULL);
     close(sockfd);
