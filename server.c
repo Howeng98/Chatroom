@@ -41,7 +41,7 @@ int main(void)
     FD_ZERO(&master);  
     FD_ZERO(&recvFD); 
     if ((rv = getaddrinfo(NULL, PORT, &addrinfo, &temp)) != 0) {
-        fprintf(stderr, "selectserver: %s\n", gai_strerror(rv));
+        fprintf(stderr, "Selectserver: %s\n", gai_strerror(rv));
         exit(1);
     }
     
@@ -105,7 +105,7 @@ int main(void)
                         {   // keep track of the max
                             sockFD_num = new_sockFD;
                         }
-                        printf("selectserver: new connection from %s on "
+                        printf("Selectserver: Connection from %s on "
                                "socket %d\n", inet_ntop(remoteaddr.ss_family,
                                get_in_addr((struct sockaddr*)&remoteaddr),
                                remoteIP, INET6_ADDRSTRLEN), new_sockFD);
@@ -113,7 +113,7 @@ int main(void)
                 } 
                 else if ((error = recv(i, buf, sizeof buf, 0)) <= 0){   
                         if (error == 0)                        
-                            printf("Selectserver: socket %d dropped\n", i);                
+                            printf("Selectserver: Socket %d dropped\n", i);                
                         else                        
                             perror("Recv");                    
                         close(i);

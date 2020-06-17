@@ -56,16 +56,11 @@ int main(int argc, char *argv[])
     int error,count;
     char s[INET6_ADDRSTRLEN];
 
-    if (argc != 2) {
-        perror("Please enter localhost name");
-        exit(1);
-    }
-
     memset(&addrInfo, 0, sizeof addrInfo);
     addrInfo.ai_family = AF_UNSPEC;
     addrInfo.ai_socktype = SOCK_STREAM;
 
-    if ((error = getaddrinfo(argv[1], PORT, &addrInfo, &serverInfo)) != 0) {
+    if ((error = getaddrinfo("127.0.0.1", PORT, &addrInfo, &serverInfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(error));
         return 1;
     }
