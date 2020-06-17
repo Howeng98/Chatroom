@@ -17,22 +17,24 @@
 #define MAXDATASIZE 256 // max number of bytes we can get at once 
 #define MAXNAMESIZE 10
 
+// this function is used to let the thread listening to the server and recv the data the is sent from the server and print it out
 void *receiveHandler(void *sock_fd)
 {
     //int* sFd = (int*) sock_fd;
 	int sockFD = (intptr_t) sock_fd;
     char buffer[MAXDATASIZE];
-    int num;
-    
+    int num;    
     while(1)
     {
+        memset(&buffer,sizeof(buffer),0);
         if ((num = recv(sockFD, buffer, MAXDATASIZE-1, 0)) == -1)
         {
             perror("Error");
             exit(1);
         }
-        else
-            buffer[num] = '\0';
+        else{
+            buffer[num] = '\0';            
+        }
         printf("%s", buffer);
     }
 }
@@ -50,13 +52,13 @@ int main(int argc, char *argv[])
 {
     char message[MAXDATASIZE];
     char username[MAXNAMESIZE];    
+    char s[INET6_ADDRSTRLEN];
     int sockfd;//, numbytes;  
     char buf[MAXDATASIZE];
-    struct addrinfo addrInfo, *serverInfo, *p;
+    struct addrinfo addrInfo, *serverInfo, *request;
     int error,count;
-    char s[INET6_ADDRSTRLEN];
 
-    memset(&addrInfo, 0, sizeof addrInfo);
+    memset(&addrInfo, 0, sizeof(addrInfo));
     addrInfo.ai_family = AF_UNSPEC;
     addrInfo.ai_socktype = SOCK_STREAM;
 
@@ -66,13 +68,13 @@ int main(int argc, char *argv[])
     }
 
     // loop through all the results and connect to the first we can
-    for(p = serverInfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,p->ai_protocol)) == -1) {
+    for(request = serverInfo; request != NULL; request = request->ai_next) {
+        if ((sockfd = socket(request->ai_family, request->ai_socktype,request->ai_protocol)) == -1) {
             perror("sockFD failed");
             continue;
         }
 
-        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
+        if (connect(sockfd, request->ai_addr, request->ai_addrlen) == -1) {
             close(sockfd);
             perror("connect failed");
             continue;
@@ -80,26 +82,25 @@ int main(int argc, char *argv[])
         break;
     }
 
-    if (p == NULL) {
+    if (request == NULL) {
         fprintf(stderr, "client: failed to connect\n");
-        return 2;
+        return EXIT_FAILURE;
     }
 
-    inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
-            s, sizeof s);
+    inet_ntop(request->ai_family, get_in_addr((struct sockaddr *)request->ai_addr),s, sizeof s);
     printf("client: connecting to %s\n", s);
 
     freeaddrinfo(serverInfo);
     
     puts("Username:");
-    memset(&username, 0,sizeof(username));
-    memset(&message, 0,sizeof(message)); 
+    memset(&username, sizeof(username),0);
+    memset(&message, sizeof(message),0); 
     fgets(username, MAXNAMESIZE, stdin);
     
     // get a new thread and recv msg
     pthread_t recv_thread;    
     
-    if( pthread_create(&recv_thread, NULL, receiveHandler, (void*)(intptr_t) sockfd) < 0)
+    if(pthread_create(&recv_thread, NULL, receiveHandler, (void*)(intptr_t) sockfd) < 0)
     {   
         perror("create thread failed");
         return EXIT_FAILURE;
@@ -112,14 +113,15 @@ int main(int argc, char *argv[])
     while(1)
 	{
 		char temp[6];
-		memset(&temp, 0,sizeof(temp));
-        memset(&buf, 0,sizeof(buf));        
+		memset(&temp, sizeof(temp),0);
+        memset(&buf, sizeof(buf),0);        
         fgets(buf, 100, stdin);
 
         // quit chatroom when they enter "/QUIT"
 		if(buf[0] == '/' && buf[1] == 'Q' && buf[2] == 'U' && buf[3] == 'I' && buf[4] == 'T')
 			return 1;		
 
+        count = 0;
         // String processing , add ":" when output
         while(count < strlen(username))
         {
@@ -136,8 +138,7 @@ int main(int argc, char *argv[])
             message[count] = buf[i];
             count++;
         }
-        message[count] = '\0';
-
+        message[count] = '\0';        
         // sending
         if(send(sockfd, message, strlen(message), 0) < 0)
         {
@@ -145,9 +146,9 @@ int main(int argc, char *argv[])
             return EXIT_FAILURE;
         }
         // initialize buffer
-        memset(&buf, 0, sizeof(buf));        
+        memset(&buf, sizeof(buf),0);        
     }
-    
+
     // close socket
     puts("Closing socket connection");
     pthread_join(recv_thread , NULL);

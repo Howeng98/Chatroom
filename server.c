@@ -25,7 +25,7 @@ int main(void)
     fd_set master;    
     fd_set recvFD;  
     int sockFD_num,listener,new_sockFD;
-    int i,j,rv,available=1,error,result;  
+    int i,j,rv,available=1,error;  
     // Client Address
     struct sockaddr_storage remoteaddr;
     socklen_t addrlen;
@@ -85,7 +85,7 @@ int main(void)
     sockFD_num = listener;
 
     while(1)
-    {
+    {        
         recvFD = master;
         if (select(sockFD_num+1, &recvFD, NULL, NULL, NULL) == -1)
         {
@@ -120,8 +120,9 @@ int main(void)
                 else if ((error = recv(i, buf, sizeof buf, 0)) <= 0){   
                         if (error == 0)                        
                             printf("Selectserver: Socket %d dropped\n", i);                
-                        else                        
-                            perror("Recv");                    
+                        else{                        
+                            perror("Recv");                                                
+                        }
                         close(i);
                         FD_CLR(i, &master);
                 }
@@ -133,13 +134,13 @@ int main(void)
                         {                            
                             if (send(j, buf, error, 0) == -1)
                             {
-                                perror("Send");
+                                perror("Send");                                
                             }                            
                         }
                     }
                 }                
             }
-        }
+        }        
     }             
     return 0;
 }
